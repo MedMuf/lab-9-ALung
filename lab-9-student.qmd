@@ -1,14 +1,26 @@
 ---
 title: "Lab 9: Data Simulation Exploration"
-author: "Your name here!"
-format: html
+author: "Alex Lung"
+date: "11/24/2024"
+format: 
+  html:  
+    embed-resources: true
+    code-tools: true
+    theme: journal
 editor: source
 embed-resources: true
+execute: 
+  echo: true
+  error: true
+code-fold: true
+code-tools: true
+message: false
+warning: false
 ---
 
 ```{r}
 #| label: setup
-
+library(tidyverse)
 
 ```
 
@@ -34,11 +46,14 @@ for it to be compatible with `map_int()`!
 #| label: function-simulation-for-random-babies
 
 randomBabies <- function(nBabies){
-  ...
+  assigned <- sample(0:nBabies, nBabies, replace = FALSE)
+  
+  # Count how many are correctly returned (match original positions)
+  sum(assigned == 1:nBabies)
 }
 
 results <- map_int(.x = 1:10000,
-                   .f = ___
+                   .f = ~ randomBabies(4)
                    )
 ```
 
@@ -56,13 +71,23 @@ You may find the following code helpful:
 
 enframe(results, 
         name = "simulation_number", 
-        value = "ncorrect")
+        value = "ncorrect") 
 ```
 :::
 
 ```{r}
 #| label: table-for-random-babies
 
+results_df <- enframe(results,
+                      name = "simulation_number",
+                      value = "ncorrect") |>
+  count(ncorrect) |>
+  mutate(proportion = n / sum(n)) |>
+  select(ncorrect, proportion) |>
+  
+  pivot_wider(names_from = ncorrect, 
+              values_from = proportion, 
+              names_prefix = "correct_")
 
 ```
 
@@ -74,15 +99,28 @@ You may find the following code helpful:
 ```{r}
 #| eval: false
 
-geom_bar(mapping = aes(y = after_stat(count) / sum(after_stat(count))
-                       )
-         )
+  geom_bar(mapping = aes(y = after_stat(count) / sum(after_stat(count))
+                         )
+           )
 ```
 :::
 
 ```{r}
 #| label: visualization-for-random-babies
+results_df |>
+  pivot_longer(cols = everything(), 
+               names_to = "ncorrect", 
+               values_to = "proportion") |>
 
+  ggplot(aes(x = ncorrect, y = proportion)) +
+  geom_bar(stat = "identity", fill = "cyan4", color = "black") +
+  labs(
+    title = "Proportion of Simulations by Number of Correct Assignments",
+    x = "Number of Correctly Assigned Babies",
+    y = "",
+    subtitle = "Proportion"
+  ) +
+  theme_bw()
 ```
 
 ## Central Limit Theorem -- Optional & Somewhat Spicy
@@ -115,8 +153,8 @@ I've provided some skeleton code to get you started. :)
 
 ```{r}
 simulate_means <- function(n, df){
-  map_dbl(.x = ___, 
-          .f = ~rchisq(n = 100, ___) %>% mean()
+  map_dbl(.x = 1:n, 
+          .f = ~rchisq(n = 100, df = df) %>% mean()
           )
 }
 ```
@@ -127,8 +165,9 @@ simulate_means <- function(n, df){
 -  **`df` = 10**
 
 ```{r}
-grid <- crossing(n = ___, 
-                 df = 5)
+grid <- crossing(n = c(10, 100, 1000, 10000), 
+                 df = 10) 
+
 ```
 
 **6. Now, use a `p_map()` to create a new column of simulated means (using the `simulate_means()` function), for every value in your `grid`.**
@@ -140,10 +179,10 @@ You will want to use the `unnest()` function to extract the results of the
 
 ```{r}
 all_simulations <- grid |> 
-  mutate(simulated_means = pmap(.l = list(___), 
+  mutate(simulated_means = pmap(.l = list(n = n, df = df), 
                                 .f = simulate_means)
          ) |> 
-  unnest(___) 
+  unnest(simulated_means) 
 
 ```
 
@@ -152,6 +191,16 @@ Hint: Make sure your columns have descriptive names!
 
 ```{r}
 #| label: table-of-simulated Means
+all_simulations |>
+  group_by(n) |>
+  summarize(
+    mean_of_simulated_means = mean(simulated_means),
+    .groups = "drop"
+  ) |>
+  rename(
+    `Sample Size (n)` = n,
+    `Mean of Simulated Means` = mean_of_simulated_means
+  )
 
 
 ```
@@ -165,7 +214,24 @@ sizes between the simulations.
 
 ```{r}
 #| label: plot-of-simulated Means
+all_simulations |>
+  #Create a label using the "paste" function to generate custom facet titles. 
+  mutate(facet_label = paste("Sample Size (n) =", n)) |>
 
+
+ggplot(aes(x = simulated_means)) +
+  geom_histogram(binwidth = 0.2, fill = "cyan4", color = "black") +
+  
+  #Create vertical line at the df of the graphs (10)
+  geom_vline(xintercept = 10, color = "red", linetype = "dashed", size = 1) +
+  facet_wrap(~facet_label, scales = "free_y") +
+  labs(
+    title = "Distributions of Simulated Means by Sample Size",
+    x = "Simulated Means",
+    y = "",
+    subtitle = "Frequency"
+  ) +
+  theme_bw()
 
 ```
 
