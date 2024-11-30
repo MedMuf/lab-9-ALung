@@ -48,7 +48,7 @@ for it to be compatible with `map_int()`!
 #| label: function-simulation-for-random-babies
 
 randomBabies <- function(nBabies){
-  assigned <- sample(0:nBabies, nBabies, replace = FALSE)
+  assigned <- sample(1:nBabies, nBabies, replace = FALSE)
   
   # Count how many are correctly returned (match original positions)
   sum(assigned == 1:nBabies)
@@ -96,7 +96,7 @@ results_df |>
   tab_header(
     title = "Proportions of Correct Baby Assignments",
     subtitle = "Based on 10,000 Random Simulations"
-  ) %>%
+  ) |>
   fmt_percent(
     columns = everything(), # Format all columns
     decimals = 2 # Display percentages with two decimal places
@@ -105,8 +105,7 @@ results_df |>
     correct_0 = "0 Correct",
     correct_1 = "1 Correct",
     correct_2 = "2 Correct",
-    correct_3 = "3 Correct",
-    correct_4 = "4 Correct"
+    correct_4 = "All Correct"
   )
 
 ```
@@ -134,12 +133,20 @@ results_df |>
 
   ggplot(aes(x = ncorrect, y = proportion)) +
   geom_bar(stat = "identity", fill = "cyan4", color = "black") +
+  
+  scale_x_discrete(labels = c("correct_0" = "0 Correct",
+                              "correct_1" = "1 Correct",
+                              "correct_2" = "2 Correct",
+                              "correct_4" = "All Correct")
+                   ) +
+  
   labs(
     title = "Proportion of Simulations by Number of Correct Assignments",
     x = "Number of Correctly Assigned Babies",
     y = "",
-    subtitle = "Proportion"
+    subtitle = "Proportion (%)"
   ) +
+
   theme_bw()
 ```
 
